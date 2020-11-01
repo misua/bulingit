@@ -63,8 +63,15 @@ resource "aws_launch_configuration" "ASGlaunchconfig" {
    }
 }
 
+
+data "aws_subnet_ids" "default"{
+    vpc_id = data.aws_vpc.default.id
+}
+
+
 resource "aws_autoscaling_group" "ASGgroup" {
     launch_configuration = aws_launch_configuration.ASGlaunchconfig.name
+    vpc_zone_identifier = data.aws_subnet_ids.default.ids
     min_size = 2
     max_size = 4
 
@@ -73,4 +80,35 @@ resource "aws_autoscaling_group" "ASGgroup" {
         value = "terra-asg-group"
         propagate_at_launch = true
     }
+}
+
+
+
+#--------ALB------
+
+resource "aws_lb" "MyALB" {
+    name = "terraform ALB example"
+    load_balancer_type = "application"
+    subnets = data.aws_subnet_ids.default.ids
+
+}
+
+
+#--------ALB security---------
+
+resource "aws_lb_listener" "http" {
+    load_balancer_arn = aws_lb.MyALB.arn
+    port = 80
+    protocol = "HTTP"   
+}
+
+default_action {
+    type = "fixed-response"
+
+    fixed_response {
+        content_type = "text/plain"
+        message_body = "404: page not found"
+        status_code = 404
+    }
+  }
 }
