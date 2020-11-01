@@ -35,13 +35,6 @@ resource "aws_security_group" "MyEC2_SG" {
 }
 
 
-output "public_ip" {
-   value = "aws_instance.myEC2.public_ip"
-   description = "fablek ip of ec2"
-}
-
-
-
 resource "aws_launch_configuration" "ASGlaunchconfig" {
     image_id = "ami-0947d2ba12ee1ff75"
     instance_type = "t2.micro"
@@ -75,7 +68,7 @@ resource "aws_autoscaling_group" "ASGgroup" {
 
     target_group_arns = [aws_lb_target_group.asgTG.arn]
     health_check_type = "ELB"
-    
+
     min_size = 2
     max_size = 4
 
@@ -99,7 +92,7 @@ resource "aws_lb" "MyALB" {
 }
 
 
-#--------ALB security---------
+#--------ALB listener--------
 
 resource "aws_lb_listener" "http" {
     load_balancer_arn = aws_lb.MyALB.arn
@@ -138,6 +131,10 @@ resource "aws_security_group" "albSG" {
     }
 }
 
+
+#-----lb target group----
+
+
 resource "aws_lb_target_group" "asgTG" {
     name = "terraform asgTG"
     port = var.server_port
@@ -153,4 +150,28 @@ resource "aws_lb_target_group" "asgTG" {
         healthy_threshold = 2
         unhealty_threshold = 2
   }
+}
+
+
+#----------lb listenr rule
+
+resource "aws_lb_listener" "asgLSTN"{
+    listener_arn = aws_lb_listener.http.arn
+    priority = 100
+
+    condition {
+        field = "path-pattern"
+        values = ["*"]
+    }
+
+    action {
+        type = "forward"
+        target_group.arn = aws_lb_target_group.asgTG.arn
+    }
+}
+
+
+output "alb_dns_name" {
+   value = "aws_lb.MyALB.dns_name"
+   description = "dns name load balancer"
 }
