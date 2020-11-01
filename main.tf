@@ -72,6 +72,10 @@ data "aws_subnet_ids" "default"{
 resource "aws_autoscaling_group" "ASGgroup" {
     launch_configuration = aws_launch_configuration.ASGlaunchconfig.name
     vpc_zone_identifier = data.aws_subnet_ids.default.ids
+
+    target_group_arns = [aws_lb_target_group.asgTG.arn]
+    health_check_type = "ELB"
+    
     min_size = 2
     max_size = 4
 
@@ -89,6 +93,7 @@ resource "aws_autoscaling_group" "ASGgroup" {
 resource "aws_lb" "MyALB" {
     name = "terraform ALB example"
     load_balancer_type = "application"
+    security_groups = [aws_security_group.albSG.id]
     subnets = data.aws_subnet_ids.default.ids
 
 }
@@ -100,7 +105,7 @@ resource "aws_lb_listener" "http" {
     load_balancer_arn = aws_lb.MyALB.arn
     port = 80
     protocol = "HTTP"   
-}
+
 
 default_action {
     type = "fixed-response"
@@ -110,5 +115,42 @@ default_action {
         message_body = "404: page not found"
         status_code = 404
     }
+  }
+}
+
+#---- asg security alb
+
+resource "aws_security_group" "albSG" {
+    name = "terraform sg alb"
+
+    ingress {
+        from_port = 80
+        to_port = 80
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    egress {
+        from_port = 80
+        to_port = 80
+        protocol = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+}
+
+resource "aws_lb_target_group" "asgTG" {
+    name = "terraform asgTG"
+    port = var.server_port
+    protocol = "HTTP"
+    vpc_id = data.aws_vpc.default.id
+
+    health_check {
+        path = "/"
+        protocol = "HTTP"
+        matcher = "200"
+        interval = 15
+        timeout = 3
+        healthy_threshold = 2
+        unhealty_threshold = 2
   }
 }
