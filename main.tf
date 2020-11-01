@@ -62,12 +62,14 @@ resource "aws_autoscaling_group" "ASGgroup" {
     target_group_arns = [aws_lb_target_group.asgTG.arn]
     health_check_type = "ELB"
 
-    min_size = 2
+    count =  = 3
+    desired_capacity=2
+    min_size = 1
     max_size = 4
 
     tag {
         key = "Name"
-        value = "terra-asg-group"
+        value = "ec2-under-asg-group"
         propagate_at_launch = true
     }
 }
@@ -77,7 +79,7 @@ resource "aws_autoscaling_group" "ASGgroup" {
 #--------ALB------
 
 resource "aws_lb" "MyALB" {
-    name = "terraform-ALB-example"
+    name = "Application-Load-balancer"
     load_balancer_type = "application"
     security_groups = [aws_security_group.albSG.id]
     subnets = data.aws_subnet_ids.default.ids
@@ -90,7 +92,7 @@ resource "aws_lb" "MyALB" {
 #---- asg security alb
 
 resource "aws_security_group" "albSG" {
-    name = "terraform sg alb"
+      name = "alb-security-grp"
 
     ingress {
         from_port = 80
